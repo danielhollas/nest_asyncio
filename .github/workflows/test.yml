@@ -10,7 +10,31 @@ env:
   FORCE_COLOR: 1
 
 jobs:
-  build:
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          python -m pip install uv
+          uv tool install mypy
+          uv tool install ruff
+
+      - name: Ruff lint
+        run: ruff check nest_asyncio.py
+
+      - name: MyPy type check
+        run: mypy nest_asyncio.py
+
+
+  test:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -26,19 +50,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install flake8 mypy .
-
-      - name: Flake8 static code analysis
-        run:
-          flake8 nest_asyncio.py
-
-      - name: MyPy static code analysis
-        run: |
-          mypy nest_asyncio.py
-
       - name: Testsuite
         run: |
+          pip install .
           python tests/nest_test.py
