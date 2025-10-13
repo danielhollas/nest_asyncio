@@ -1,52 +1,56 @@
 name: nest_asyncio
 
-on: [ push, pull_request, workflow_dispatch ]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
 
 env:
   FORCE_COLOR: 1
 
 jobs:
-  build:
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          python -m pip install uv
+          uv tool install mypy
+          uv tool install ruff
+
+      - name: Ruff lint
+        run: ruff check .
+
+      - name: MyPy type check
+        run: mypy nest_asyncio.py
+
+
+  test:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: [ 3.5, 3.6, 3.7, 3.8, 3.9, "3.10", "3.11", "3.12", pypy-3.9 ]
-        exclude:
-          - os: ubuntu-latest
-            python-version: 3.5
-          - os: ubuntu-latest
-            python-version: 3.6
-        include:
-          - os: ubuntu-20.04
-            python-version: 3.5
-          - os: ubuntu-20.04
-            python-version: 3.6
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          allow-prereleases: true
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install flake8 mypy .
-
-      - name: Flake8 static code analysis
-        run:
-          flake8 nest_asyncio.py
-
-      - name: MyPy static code analysis
-        run: |
-          mypy nest_asyncio.py
 
       - name: Testsuite
         run: |
+          pip install .
           python tests/nest_test.py
-
-

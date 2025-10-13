@@ -13,7 +13,6 @@ def apply(loop=None):
     """Patch asyncio to make its event loop reentrant."""
     _patch_asyncio()
     _patch_policy()
-    _patch_tornado()
 
     loop = loop or asyncio.get_event_loop()
     _patch_loop(loop)
@@ -34,7 +33,7 @@ def _patch_asyncio():
                 with suppress(asyncio.CancelledError):
                     loop.run_until_complete(task)
 
-    def _get_event_loop(stacklevel=3):
+    def _get_event_loop(stacklevel=3):  # noqa: ARG001
         loop = events._get_running_loop()
         if loop is None:
             loop = events.get_event_loop_policy().get_event_loop()
@@ -43,17 +42,10 @@ def _patch_asyncio():
     # Use module level _current_tasks, all_tasks and patch run method.
     if hasattr(asyncio, '_nest_patched'):
         return
-    if sys.version_info >= (3, 6, 0):
-        asyncio.Task = asyncio.tasks._CTask = asyncio.tasks.Task = \
-            asyncio.tasks._PyTask
-        asyncio.Future = asyncio.futures._CFuture = asyncio.futures.Future = \
-            asyncio.futures._PyFuture
-    if sys.version_info < (3, 7, 0):
-        asyncio.tasks._current_tasks = asyncio.tasks.Task._current_tasks
-        asyncio.all_tasks = asyncio.tasks.Task.all_tasks
-    if sys.version_info >= (3, 9, 0):
-        events._get_event_loop = events.get_event_loop = \
-            asyncio.get_event_loop = _get_event_loop
+
+    asyncio.Task = asyncio.tasks._CTask = asyncio.tasks.Task = asyncio.tasks._PyTask
+    asyncio.Future = asyncio.futures._CFuture = asyncio.futures.Future = asyncio.futures._PyFuture
+    events._get_event_loop = events.get_event_loop = asyncio.get_event_loop = _get_event_loop
     asyncio.run = run
     asyncio._nest_patched = True
 
@@ -93,8 +85,7 @@ def _patch_loop(loop):
                 if self._stopping:
                     break
             if not f.done():
-                raise RuntimeError(
-                    'Event loop stopped before Future completed.')
+                raise RuntimeError('Event loop stopped before Future completed.')
             return f.result()
 
     def _run_once(self):
@@ -167,9 +158,6 @@ def _patch_loop(loop):
 
     @contextmanager
     def manage_asyncgens(self):
-        if not hasattr(sys, 'get_asyncgen_hooks'):
-            # Python version is too old.
-            return
         old_agen_hooks = sys.get_asyncgen_hooks()
         try:
             self._set_coroutine_origin_tracking(self._debug)
@@ -189,31 +177,15 @@ def _patch_loop(loop):
 
     if hasattr(loop, '_nest_patched'):
         return
+
     if not isinstance(loop, asyncio.BaseEventLoop):
-        raise ValueError('Can\'t patch loop of type %s' % type(loop))
+        raise ValueError(f"Can't patch loop of type {type(loop)}")
     cls = loop.__class__
     cls.run_forever = run_forever
     cls.run_until_complete = run_until_complete
     cls._run_once = _run_once
     cls._check_running = _check_running
-    cls._check_runnung = _check_running  # typo in Python 3.7 source
     cls._num_runs_pending = 1 if loop.is_running() else 0
-    cls._is_proactorloop = (
-        os.name == 'nt' and issubclass(cls, asyncio.ProactorEventLoop))
-    if sys.version_info < (3, 7, 0):
-        cls._set_coroutine_origin_tracking = cls._set_coroutine_wrapper
-    curr_tasks = asyncio.tasks._current_tasks \
-        if sys.version_info >= (3, 7, 0) else asyncio.Task._current_tasks
+    cls._is_proactorloop = os.name == 'nt' and issubclass(cls, asyncio.ProactorEventLoop)
+    curr_tasks = asyncio.tasks._current_tasks
     cls._nest_patched = True
-
-
-def _patch_tornado():
-    """
-    If tornado is imported before nest_asyncio, make tornado aware of
-    the pure-Python asyncio Future.
-    """
-    if 'tornado' in sys.modules:
-        import tornado.concurrent as tc  # type: ignore
-        tc.Future = asyncio.Future
-        if asyncio.Future not in tc.FUTURES:
-            tc.FUTURES += (asyncio.Future,)

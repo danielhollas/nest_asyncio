@@ -1,11 +1,10 @@
 import asyncio
-import sys
 import unittest
 
 import nest_asyncio
 
 
-def exception_handler(loop, context):
+def exception_handler(loop, context):  # noqa: ARG001
     print('Exception:', context)
 
 
@@ -87,7 +86,6 @@ class NestTest(unittest.TestCase):
             asyncio.gather(f1(), f2()))
         self.assertEqual(result, [4, 2])
 
-    @unittest.skipIf(sys.version_info < (3, 7, 0), 'No contextvars module')
     def test_contextvars(self):
         from contextvars import ContextVar
         var = ContextVar('var')
