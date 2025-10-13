@@ -13,7 +13,6 @@ def apply(loop=None):
     """Patch asyncio to make its event loop reentrant."""
     _patch_asyncio()
     _patch_policy()
-    _patch_tornado()
 
     loop = loop or asyncio.get_event_loop()
     _patch_loop(loop)
@@ -190,15 +189,3 @@ def _patch_loop(loop):
     cls._is_proactorloop = os.name == 'nt' and issubclass(cls, asyncio.ProactorEventLoop)
     curr_tasks = asyncio.tasks._current_tasks
     cls._nest_patched = True
-
-
-def _patch_tornado():
-    """
-    If tornado is imported before nest_asyncio, make tornado aware of
-    the pure-Python asyncio Future.
-    """
-    if 'tornado' in sys.modules:
-        import tornado.concurrent as tc  # type: ignore
-        tc.Future = asyncio.Future
-        if asyncio.Future not in tc.FUTURES:
-            tc.FUTURES += (asyncio.Future,)
