@@ -28,7 +28,7 @@ jobs:
           uv tool install ruff
 
       - name: Ruff lint
-        run: ruff check nest_asyncio.py
+        run: ruff check .
 
       - name: MyPy type check
         run: mypy nest_asyncio.py
