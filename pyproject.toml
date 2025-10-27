@@ -5,11 +5,12 @@ requires = ['flit_core >=3.4,<4']
 [project]
 name = "nest_asyncio"
 description = "Patch asyncio to allow nested event loops"
-version = "1.6.0.dev0"
+version = "2.0.0a0"
 authors = [
-  { name = "Ewald R. de Wit", email = "ewald.de.wit@gmail.com" },
+  { name = "Ewald R. de Wit"},
+  { name = "Daniel Hollas", email = "danekhollas@gmail.com" },
 ]
-readme = "README.rst"
+readme = "README.md"
 license.file = "LICENSE"
 requires-python = ">=3.9"
 
@@ -28,4 +29,4 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/erdewit/nest_asyncio"
+Homepage = "https://github.com/danielhollas/nest_asyncio"
