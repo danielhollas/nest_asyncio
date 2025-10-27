@@ -39,6 +39,14 @@ def _patch_asyncio():
             loop = events.get_event_loop_policy().get_event_loop()
         return loop
 
+    # We need to patch this since 3.14 due to:
+    # https://github.com/python/cpython/pull/129899
+    def current_task(loop=None):
+        """Return a currently executed task."""
+        if loop is None:
+            loop = asyncio.events.get_running_loop()
+        return asyncio.tasks._current_tasks.get(loop)
+
     # Use module level _current_tasks, all_tasks and patch run method.
     if hasattr(asyncio, '_nest_patched'):
         return
@@ -47,6 +55,8 @@ def _patch_asyncio():
     asyncio.Future = asyncio.futures._CFuture = asyncio.futures.Future = asyncio.futures._PyFuture
     events._get_event_loop = events.get_event_loop = asyncio.get_event_loop = _get_event_loop
     asyncio.run = run
+    if sys.version_info >= (3, 14, 0):
+        asyncio.tasks.current_task = current_task
     asyncio._nest_patched = True
 
 
